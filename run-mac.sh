@@ -26,6 +26,14 @@ export PYTORCH_ENABLE_MPS_FALLBACK=1
 # Mac. Override per run: PYTORCH_MPS_HIGH_WATERMARK_RATIO=1.4 ./run-mac.sh
 export PYTORCH_MPS_HIGH_WATERMARK_RATIO="${PYTORCH_MPS_HIGH_WATERMARK_RATIO:-1.7}"
 
+# When the allocator starts handing cached-but-free GPU memory back to macOS
+# (a soft target, same units). PyTorch's unified-memory default is 1.4: about
+# 15 GB on a 16 GB Mac, i.e. never. Measured on an SDXL inpaint at that
+# default: 7.9 GB of live tensors, 13.1 GB held, the rest of the system in
+# swap. 0.9 (~9.6 GB here) makes it give the cache back long before that;
+# being soft, it can't cause an out-of-memory error.
+export PYTORCH_MPS_LOW_WATERMARK_RATIO="${PYTORCH_MPS_LOW_WATERMARK_RATIO:-0.9}"
+
 # The prompt-expansion tokenizer is used before Comfy forks; without this,
 # huggingface/tokenizers prints a fork warning on every generation.
 export TOKENIZERS_PARALLELISM=false

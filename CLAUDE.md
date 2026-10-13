@@ -42,7 +42,11 @@ John's fork of DavidDragonsage/FooocusPlus (itself a Fooocus fork, GPL-3.0).
   deterministic.
 - **Memory ceiling.** `launch.py` defaults `PYTORCH_MPS_HIGH_WATERMARK_RATIO` to
   `0.0` (no limit) only if unset; `run-mac.sh` sets `1.7`. Don't hard-set it in
-  Python again.
+  Python again. `run-mac.sh` also sets `PYTORCH_MPS_LOW_WATERMARK_RATIO=0.9`:
+  at PyTorch's unified-memory default (1.4, ~15 GB on 16 GB) the allocator
+  never returns its cache, and an SDXL inpaint held 13.1 GB for 7.9 GB of live
+  tensors. `[Mem]` lines (`modules/patch.py`, `log_mps_memory`) print live vs
+  held — read them before tuning either ratio.
 - **Python 3.11, not upstream's 3.10.** SciPy 1.15.x — the last release for
   3.10 — ships a Fortran `_spropack.so` that recent macOS's loader rejects
   (`__thread_bss ... offset field is not zero`), and `rembg` imports it at
