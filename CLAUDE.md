@@ -65,6 +65,17 @@ John's fork of DavidDragonsage/FooocusPlus (itself a Fooocus fork, GPL-3.0).
   `ldm_patched/modules/model_patcher.py` puts those copies in an unlinked
   mmap'd temp file on MPS (writes back to the file, not swap). Comfy's own
   patcher (`comfy/`, used for Z-Image/Flux) does not have this yet.
+- **Inpaint skips the synthetic-refiner swap on MPS.** With no refiner, Fooocus
+  swaps to the un-patched base model at 80% of an inpaint's steps; on a 16 GB
+  Mac that unpatch/re-patch took 35 s and ~5 GB of churn. `mac_skips_inpaint_
+  refiner_swap()` in `modules/async_worker.py` turns it off on MPS;
+  `FOOOCUS_INPAINT_REFINER_SWAP=1` restores it. It changes output slightly —
+  John's call which he prefers, inpaint quality is the point of this fork.
+- **Logs carry the settings.** `log_settings()` prints a `[Settings]` block per
+  generation and `log_loaded_models()` a per-model GPU breakdown — ask for
+  those lines with any timing report.
+- **Text encoders already run on the CPU on MPS** (`text_encoder_device()`:
+  SHARED vram state → cpu). Don't "free" them from the GPU; they aren't there.
 - **Comfy runs as a subprocess** (`backend_base/comfyd.py`) using
   `sys.executable` and the parent's environment. Flux / Z-Image go through it;
   SDXL doesn't. Env vars set in `run-mac.sh` reach both.

@@ -65,6 +65,16 @@ PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 ./run-mac.sh   # upstream behaviour, no lim
 
 Close other heavy apps (browsers with many tabs, Docker) before generating.
 
+## Inpainting
+
+On the Mac, inpainting keeps Fooocus's inpaint patch on for every step. Upstream
+switches back to the plain model for the last 20% of steps; on 16 GB that
+switch cost ~35 s per image. To compare quality with upstream behaviour:
+
+```bash
+FOOOCUS_INPAINT_REFINER_SWAP=1 ./run-mac.sh --preset RealVisXL
+```
+
 ## Updating
 
 There is no auto-update. `git pull` on the `mac` branch, then re-run

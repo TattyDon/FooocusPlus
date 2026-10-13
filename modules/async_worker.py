@@ -1,3 +1,4 @@
+import os
 import threading
 import args_manager
 import common
@@ -110,6 +111,51 @@ def build_image_type(async_task, base_type, update_global=True):
         _image_type = final_type
 
     return final_type
+
+
+def mac_skips_inpaint_refiner_swap():
+    """
+    Fooocus finishes an inpaint on the plain model: with no refiner chosen it
+    makes the base model a "synthetic refiner" and swaps to it at 80% of the
+    steps, removing the inpaint patch. Swapping means unpatching and
+    re-patching nearly every UNet weight; on a 16 GB Mac that took 35 s and
+    churned ~5 GB mid-image. Skipped on Apple Silicon unless
+    FOOOCUS_INPAINT_REFINER_SWAP=1, which restores upstream behaviour (and
+    upstream quality, if the last steps without the patch matter to you).
+    """
+    import ldm_patched.modules.model_management as mm
+    return mm.mps_mode() and os.environ.get('FOOOCUS_INPAINT_REFINER_SWAP', '0') != '1'
+
+
+def log_settings(async_task, goals, width, height, switch,
+                 additional_loras, use_synthetic_refiner):
+    """One block per generation, so a pasted log says what was run."""
+    def get(name, default='-'):
+        return getattr(async_task, name, default)
+    loras = [f'{Path(str(n)).name} {w:g}' for n, w in (get('loras', []) or [])
+             if str(n) != 'None'] + [f'{Path(str(n)).name} {w:g} (auto)' for n, w in additional_loras]
+    performance = get('performance_selection')
+    performance = getattr(performance, 'value', performance)
+    lines = [
+        f'preset {args_manager.args.preset}, model {get("base_model_name")}, refiner {get("refiner_model_name")}',
+        f'performance {performance}, steps {get("steps")}, refiner switch at {switch}, '
+        f'synthetic refiner {"on" if use_synthetic_refiner else "off"}',
+        f'size {width}x{height}, images {get("image_quantity")}, seed {get("seed")}',
+        f'sampler {get("sampler_name")} / {get("scheduler_name")}, cfg {get("cfg_scale")}, '
+        f'sharpness {get("sharpness")}',
+        f'loras: {", ".join(loras) if loras else "none"}',
+        f'mode: {", ".join(goals) if goals else "text to image"}',
+    ]
+    if 'inpaint' in goals:
+        lines.append(f'inpaint engine {get("inpaint_engine")}, strength {get("inpaint_strength")}, '
+                     f'respective field {get("inpaint_respective_field")}, '
+                     f'outpaint {get("outpaint_selections") or "none"}')
+    cli = args_manager.args
+    attention = 'split' if cli.attention_split else 'quad' if cli.attention_quad else 'pytorch'
+    lines.append(f'attention {attention}, fp16 {"forced" if cli.all_in_fp16 else "auto"}, '
+                 f'MPS watermarks high {os.environ.get("PYTORCH_MPS_HIGH_WATERMARK_RATIO", "default")} '
+                 f'low {os.environ.get("PYTORCH_MPS_LOW_WATERMARK_RATIO", "default")}')
+    print('[Settings] ' + '\n[Settings] '.join(lines))
 
 
 class AsyncTask:
@@ -1451,8 +1497,12 @@ def worker():
                     base_model_additional_loras += [(inpaint_patch_model_path, 1.0)]
                     interpret('Current Inpaint model is:', inpaint_patch_model_path)
                     if async_task.refiner_model_name == 'None':
-                        use_synthetic_refiner = True
-                        async_task.refiner_switch = 0.8
+                        if mac_skips_inpaint_refiner_swap():
+                            interpret('[Mac] Inpaint refiner swap skipped:',
+                                'the inpaint patch stays on for every step')
+                        else:
+                            use_synthetic_refiner = True
+                            async_task.refiner_switch = 0.8
                 else:
                     inpaint_head_model_path, inpaint_patch_model_path = None, None
                     interpret('Parameterized inpaint is disabled')
@@ -1968,6 +2018,8 @@ def worker():
 
         interpret('[Worker] Sampler =', async_task.sampler_name + ' - ' + async_task.scheduler_name)
         interpret('[Worker] Steps =', str(async_task.steps) + ' - ' + str(switch))
+        log_settings(async_task, goals, width, height, switch,
+            base_model_additional_loras, use_synthetic_refiner)
 
         progressbar(async_task, current_progress, 'Initializing...')
 

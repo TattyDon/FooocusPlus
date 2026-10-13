@@ -479,7 +479,24 @@ def patched_load_models_gpu(*args, **kwargs):
         # it back once the load is done.
         torch.mps.empty_cache()
         log_mps_memory('after model load')
+        log_loaded_models()
     return y
+
+
+def log_loaded_models():
+    """
+    Which models hold GPU memory, and in what dtype. Added because an SDXL
+    inpaint showed 7.9 GB live where the fp16 UNet alone is ~5.1 GB.
+    """
+    gb = 1024 ** 3
+    for loaded in ldm_patched.modules.model_management.current_loaded_models:
+        on_gpu = {}
+        for t in list(loaded.model.model.parameters()) + list(loaded.model.model.buffers()):
+            if t.device.type == 'mps':
+                key = str(t.dtype).replace('torch.', '')
+                on_gpu[key] = on_gpu.get(key, 0) + t.numel() * t.element_size()
+        detail = ', '.join(f'{k} {v / gb:.2f} GB' for k, v in on_gpu.items()) or 'nothing on GPU'
+        print(f'[Mem]   {type(loaded.model.model).__name__}: {detail}')
 
 
 def build_loaded(module, loader_name):
