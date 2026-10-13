@@ -2090,9 +2090,14 @@ def worker():
         def callback(step, x0, x, total_steps, y):
             if step == 0:
                 async_task.callback_steps = 0
+            import modules.patch
             if step in (0, total_steps - 1):
-                import modules.patch
                 modules.patch.log_mps_memory(f'sampling step {step + 1}/{total_steps}')
+            # On Apple Silicon the step's activations (mostly attention) stay
+            # in the MPS allocator's cache after the step: measured 13.1 GB
+            # held for 7.9 GB live on an SDXL inpaint. On unified memory that
+            # pushes the rest of the system into swap between steps; return it.
+            modules.patch.release_mps_cache()
             async_task.callback_steps += (100 - preparation_steps) / float(all_steps)
             async_task.yields.append(['preview', (
                 int(current_progress + async_task.callback_steps),

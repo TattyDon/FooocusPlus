@@ -461,6 +461,11 @@ def log_mps_memory(stage):
           f'swap {psutil.swap_memory().used / gb:.1f} GB')
 
 
+def release_mps_cache():
+    if ldm_patched.modules.model_management.mps_mode():
+        torch.mps.empty_cache()
+
+
 def patched_load_models_gpu(*args, **kwargs):
     execution_start_time = time.perf_counter()
     y = ldm_patched.modules.model_management.load_models_gpu_origin(*args, **kwargs)
