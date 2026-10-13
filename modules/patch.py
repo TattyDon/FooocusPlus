@@ -443,12 +443,37 @@ def patched_unet_forward(self, x, timesteps=None, context=None, y=None, control=
         return self.out(h)
 
 
+def log_mps_memory(stage):
+    """
+    One line of memory figures on Apple Silicon, where CPU and GPU share RAM
+    and running short means swap rather than an out-of-memory error.
+    live: tensors in use on the GPU; held: what PyTorch's MPS allocator has
+    taken from macOS, including freed blocks it caches for reuse; process:
+    resident memory of this process; swap: system-wide.
+    """
+    if not ldm_patched.modules.model_management.mps_mode():
+        return
+    import psutil
+    gb = 1024 ** 3
+    print(f'[Mem] {stage}: GPU live {torch.mps.current_allocated_memory() / gb:.1f} GB, '
+          f'GPU held {torch.mps.driver_allocated_memory() / gb:.1f} GB, '
+          f'process {psutil.Process().memory_info().rss / gb:.1f} GB, '
+          f'swap {psutil.swap_memory().used / gb:.1f} GB')
+
+
 def patched_load_models_gpu(*args, **kwargs):
     execution_start_time = time.perf_counter()
     y = ldm_patched.modules.model_management.load_models_gpu_origin(*args, **kwargs)
     moving_time = time.perf_counter() - execution_start_time
     if moving_time > 0.1:
         interpret(f'[Patch] Moving model(s) has taken {moving_time:.2f} seconds')
+    if ldm_patched.modules.model_management.mps_mode():
+        # Applying LoRA / inpaint patches makes a float32 temporary per weight
+        # on the GPU. The MPS allocator keeps freed blocks for reuse, and on
+        # unified memory that cache crowds everything else into swap; hand
+        # it back once the load is done.
+        torch.mps.empty_cache()
+        log_mps_memory('after model load')
     return y
 
 

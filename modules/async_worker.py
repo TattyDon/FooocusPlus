@@ -2090,6 +2090,9 @@ def worker():
         def callback(step, x0, x, total_steps, y):
             if step == 0:
                 async_task.callback_steps = 0
+            if step in (0, total_steps - 1):
+                import modules.patch
+                modules.patch.log_mps_memory(f'sampling step {step + 1}/{total_steps}')
             async_task.callback_steps += (100 - preparation_steps) / float(all_steps)
             async_task.yields.append(['preview', (
                 int(current_progress + async_task.callback_steps),
