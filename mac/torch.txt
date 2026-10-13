@@ -1,0 +1,6 @@
+# PyTorch for Apple Silicon. 2.10.0 is the version upstream FooocusPlus picks
+# for Apple Silicon Macs with 11 GB or more of unified memory
+# (launch_support.py, dependency_resolver), which keeps Comfy mode enabled.
+torch==2.10.0
+torchvision==0.25.0
+torchaudio==2.10.0

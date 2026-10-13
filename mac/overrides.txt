@@ -1,0 +1,7 @@
+# Mac-only version overrides applied when compiling requirements-mac.txt.
+# Each one replaces a pin from requirements_versions.txt; say why.
+
+# 4.9.3 has no macOS arm64 wheel for Python 3.10 and would have to build
+# against libxml2/libxslt headers. 5.3.0 ships one. Only enhanced/gallery.py
+# (etree) and svglib use it.
+lxml==5.3.0

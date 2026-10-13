@@ -47,7 +47,9 @@ apply_comfy_patch()
 
 # Environment memory assignments (strictly platform-independent writes)
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
-os.environ['PYTORCH_MPS_HIGH_WATERMARK_RATIO'] = '0.0'
+# setdefault, so run-mac.sh can keep a memory ceiling: 0.0 means no limit,
+# which on a 16 GB Mac lets a large model swap the whole system
+os.environ.setdefault('PYTORCH_MPS_HIGH_WATERMARK_RATIO', '0.0')
 os.environ['GRADIO_ANALYTICS_ENABLED'] = 'False'
 os.environ['GRADIO_SERVER_PORT'] = '7865'
 # an update would cause some serious errors:

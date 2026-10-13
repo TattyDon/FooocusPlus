@@ -3,6 +3,8 @@
 
 # FooocusPlus – AI Art Made Simple
 
+> **This fork (TattyDon/FooocusPlus) targets Apple Silicon Macs.** Start with [MAC.md](MAC.md): `./mac/setup.sh` once, then `./run-mac.sh`.
+
 FooocusPlus is a community-developed AI image generation program that makes creating stunning works of art easier than ever. FooocusPlus runs offline on your computer and is completely free! Now you can have your very own Stable Diffusion or Midjourney that helps turn your creative ideas into beautiful images without any technical skills.
 
 ## Features

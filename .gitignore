@@ -96,3 +96,6 @@ wd-v1-4-moat-tagger-v2.csv
 /comfy/user/default/*.json
 /comfy/custom_nodes/comfyui_controlnet_aux/config.yaml
 /patch_pyhash.py*
+
+# Mac (uv) virtualenv — see mac/setup.sh
+/.venv
