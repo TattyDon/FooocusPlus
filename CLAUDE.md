@@ -49,6 +49,11 @@ John's fork of DavidDragonsage/FooocusPlus (itself a Fooocus fork, GPL-3.0).
   startup, so on 3.10 the app dies before the UI. 1.17.1 (PROPACK in C) needs
   3.11. Don't move back to 3.10, and check new pins have cp311 macOS arm64
   wheels. `launch.py`'s only 3.10 check is in the xformers path, unused on Mac.
+- **SDXL needs `--all-in-fp16` on MPS.** The SDXL engine's `should_use_fp16()`
+  returns False for MPS, so without the flag SDXL loads in fp32 (~10 GB, held
+  twice while moving to the GPU) and a 16 GB Mac swaps every step — measured
+  330 s/it and a 171 s model move. The VAE stays fp32 regardless (good: SDXL's
+  VAE gives black images in fp16). Don't drop the flag from `run-mac.sh`.
 - **Comfy runs as a subprocess** (`backend_base/comfyd.py`) using
   `sys.executable` and the parent's environment. Flux / Z-Image go through it;
   SDXL doesn't. Env vars set in `run-mac.sh` reach both.

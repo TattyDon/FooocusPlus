@@ -30,9 +30,16 @@ export PYTORCH_MPS_HIGH_WATERMARK_RATIO="${PYTORCH_MPS_HIGH_WATERMARK_RATIO:-1.7
 #   not try to reinstall it — this is the hook upstream added for Pinokio.
 # --preset: Z-Image Turbo, Q8 GGUF. Photoreal, 8 steps, and GGUF rather than
 #   FP8 because Metal has no float8 type (the FP8 presets won't run on a Mac).
+# --all-in-fp16: the SDXL engine (ldm_patched/modules/model_management.py,
+#   should_use_fp16) treats MPS as "no fp16", so SDXL loads in fp32 — ~10 GB,
+#   held twice while it moves to the GPU. On 16 GB that swapped every step
+#   (330 s/it). FP16 halves it. The VAE stays fp32 (VAE_DTYPE ignores this
+#   flag), which avoids SDXL's black-image fp16 VAE bug, and attention still
+#   upcasts. Comfy (Z-Image) doesn't receive this flag and is unaffected.
 # entry_without_update.py: no git pull on launch. This fork diverges from
 #   upstream; update with git yourself.
 exec .venv/bin/python entry_without_update.py \
     --gpu-type none \
+    --all-in-fp16 \
     --preset ZI-TurboX_8GGUF \
     "$@"
