@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time install for Apple Silicon Macs. Creates .venv with Python 3.10 and
+# One-time install for Apple Silicon Macs. Creates .venv with Python 3.11 and
 # every dependency pinned in mac/requirements-mac.txt. Safe to re-run: it
 # brings an existing .venv back in line with the lockfile.
 set -euo pipefail
@@ -20,11 +20,21 @@ if ! command -v uv >/dev/null 2>&1; then
     die "uv is not installed. Install it with: brew install uv  (or: curl -LsSf https://astral.sh/uv/install.sh | sh)"
 fi
 
+PYTHON_VERSION=3.11
+
+# A .venv on another Python (an earlier version of this script used 3.10) is
+# rebuilt rather than patched: compiled packages are tied to the interpreter.
+if [[ -x .venv/bin/python ]] && \
+   [[ "$(.venv/bin/python -c 'import sys; print("%d.%d" % sys.version_info[:2])')" != "$PYTHON_VERSION" ]]; then
+    say "Replacing .venv: it is not Python $PYTHON_VERSION"
+    rm -rf .venv
+fi
+
 # --seed puts pip in the venv: FooocusPlus's launcher checks its requirements at
 # every start and calls pip for anything missing, so it must be there.
 if [[ ! -x .venv/bin/python ]]; then
-    say "Creating .venv (Python 3.10)"
-    uv venv --python 3.10 --seed .venv
+    say "Creating .venv (Python $PYTHON_VERSION)"
+    uv venv --python "$PYTHON_VERSION" --seed .venv
 fi
 export VIRTUAL_ENV="$PWD/.venv"
 

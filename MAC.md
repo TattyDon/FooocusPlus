@@ -1,6 +1,6 @@
 # FooocusPlus on Apple Silicon
 
-This fork's Mac setup: uv-managed Python 3.10, every dependency pinned, no
+This fork's Mac setup: uv-managed Python 3.11, every dependency pinned, no
 self-update, one command to start. Aimed at an M-series Mac with 16 GB.
 
 ## Install (once)

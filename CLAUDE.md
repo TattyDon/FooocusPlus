@@ -16,7 +16,7 @@ John's fork of DavidDragonsage/FooocusPlus (itself a Fooocus fork, GPL-3.0).
 
 ## Mac setup (see MAC.md for the user-facing version)
 
-- `mac/setup.sh` — one-time install with uv into `.venv` (Python 3.10).
+- `mac/setup.sh` — one-time install with uv into `.venv` (Python 3.11).
 - `run-mac.sh` — launches `entry_without_update.py --gpu-type none --preset ZI-TurboX_8GGUF`.
 - `mac/requirements-mac.txt` — the lockfile; **generated** by `mac/lock.sh`
   from `requirements_versions.txt` + `requirements_macos.txt` + `mac/torch.txt`
@@ -43,8 +43,12 @@ John's fork of DavidDragonsage/FooocusPlus (itself a Fooocus fork, GPL-3.0).
 - **Memory ceiling.** `launch.py` defaults `PYTORCH_MPS_HIGH_WATERMARK_RATIO` to
   `0.0` (no limit) only if unset; `run-mac.sh` sets `1.7`. Don't hard-set it in
   Python again.
-- **Python 3.10 only.** Upstream pins (gradio 3.43, numpy 1.26, torch-era
-  packages) assume it.
+- **Python 3.11, not upstream's 3.10.** SciPy 1.15.x — the last release for
+  3.10 — ships a Fortran `_spropack.so` that recent macOS's loader rejects
+  (`__thread_bss ... offset field is not zero`), and `rembg` imports it at
+  startup, so on 3.10 the app dies before the UI. 1.17.1 (PROPACK in C) needs
+  3.11. Don't move back to 3.10, and check new pins have cp311 macOS arm64
+  wheels. `launch.py`'s only 3.10 check is in the xformers path, unused on Mac.
 - **Comfy runs as a subprocess** (`backend_base/comfyd.py`) using
   `sys.executable` and the parent's environment. Flux / Z-Image go through it;
   SDXL doesn't. Env vars set in `run-mac.sh` reach both.

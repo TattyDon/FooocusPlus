@@ -5,3 +5,11 @@
 # against libxml2/libxslt headers. 5.3.0 ships one. Only enhanced/gallery.py
 # (etree) and svglib use it.
 lxml==5.3.0
+
+# 1.15.x (the last release for Python 3.10) ships a Fortran-built
+# _spropack.so that recent macOS refuses to load ("__thread_bss has a
+# zero-fill section type, but offset field is not zero"), and rembg ->
+# pymatting -> scipy.sparse imports it at startup. 1.17.1 rewrote PROPACK
+# in C. It needs Python 3.11, which is why this fork's Mac setup uses 3.11.
+# https://github.com/scipy/scipy/issues/25635
+scipy==1.17.1
