@@ -26,6 +26,10 @@ export PYTORCH_ENABLE_MPS_FALLBACK=1
 # Mac. Override per run: PYTORCH_MPS_HIGH_WATERMARK_RATIO=1.4 ./run-mac.sh
 export PYTORCH_MPS_HIGH_WATERMARK_RATIO="${PYTORCH_MPS_HIGH_WATERMARK_RATIO:-1.7}"
 
+# The prompt-expansion tokenizer is used before Comfy forks; without this,
+# huggingface/tokenizers prints a fork warning on every generation.
+export TOKENIZERS_PARALLELISM=false
+
 # --gpu-type none: torch is managed by uv (mac/setup.sh), so the launcher must
 #   not try to reinstall it — this is the hook upstream added for Pinokio.
 # --preset: Z-Image Turbo, Q8 GGUF. Photoreal, 8 steps, and GGUF rather than

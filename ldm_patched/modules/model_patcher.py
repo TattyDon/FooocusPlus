@@ -1,9 +1,38 @@
 import torch
 import copy
 import inspect
+import os
+import tempfile
 
 import ldm_patched.modules.utils
 import ldm_patched.modules.model_management
+
+
+def backup_weight(weight, offload_device, copy_weight):
+    """
+    Keep an unpatched copy of a weight so LoRAs can be removed later.
+
+    On a discrete GPU the backup sits in system RAM, apart from VRAM. On Apple
+    Silicon (MPS) CPU and GPU share one pool, so the backup is a second copy
+    of every LoRA-patched weight in the same memory as the model itself: on a
+    16 GB Mac the SDXL offset LoRA alone pushed the process to 18.8 GB and
+    sampling from ~6 to 138 s/it through swap. There, back it with a file
+    instead: dirty pages are written to the file rather than swap, and the
+    OS can drop them under pressure. The file is unlinked at once, so it
+    disappears when the tensor is freed.
+    """
+    if not ldm_patched.modules.model_management.mps_mode():
+        return weight.to(device=offload_device, copy=copy_weight)
+
+    fd, path = tempfile.mkstemp(prefix='fooocus-lora-backup-')
+    os.close(fd)
+    try:
+        backup = torch.from_file(path, shared=True, size=weight.numel(), dtype=weight.dtype)
+    finally:
+        os.unlink(path)
+    backup = backup.view(weight.shape)
+    backup.copy_(weight)
+    return backup
 
 class ModelPatcher:
     def __init__(self, model, load_device, offload_device, size=0, current_device=None, weight_inplace_update=False):
@@ -193,7 +222,7 @@ class ModelPatcher:
                 inplace_update = self.weight_inplace_update
 
                 if key not in self.backup:
-                    self.backup[key] = weight.to(device=self.offload_device, copy=inplace_update)
+                    self.backup[key] = backup_weight(weight, self.offload_device, inplace_update)
 
                 if device_to is not None:
                     temp_weight = ldm_patched.modules.model_management.cast_to_device(weight, device_to, torch.float32, copy=True)

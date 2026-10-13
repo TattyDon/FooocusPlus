@@ -54,6 +54,13 @@ John's fork of DavidDragonsage/FooocusPlus (itself a Fooocus fork, GPL-3.0).
   twice while moving to the GPU) and a 16 GB Mac swaps every step — measured
   330 s/it and a 171 s model move. The VAE stays fp32 regardless (good: SDXL's
   VAE gives black images in fp16). Don't drop the flag from `run-mac.sh`.
+- **LoRA backups are file-backed on MPS.** `ModelPatcher.patch_model` keeps an
+  unpatched copy of every weight a LoRA touches. On unified memory that copy
+  competes with the model itself: the RealVisXL preset's offset LoRA took the
+  process to 18.8 GB and sampling from 5.8 to 138 s/it. `backup_weight()` in
+  `ldm_patched/modules/model_patcher.py` puts those copies in an unlinked
+  mmap'd temp file on MPS (writes back to the file, not swap). Comfy's own
+  patcher (`comfy/`, used for Z-Image/Flux) does not have this yet.
 - **Comfy runs as a subprocess** (`backend_base/comfyd.py`) using
   `sys.executable` and the parent's environment. Flux / Z-Image go through it;
   SDXL doesn't. Env vars set in `run-mac.sh` reach both.
