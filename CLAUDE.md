@@ -73,7 +73,12 @@ John's fork of DavidDragonsage/FooocusPlus (itself a Fooocus fork, GPL-3.0).
   John's call which he prefers, inpaint quality is the point of this fork.
 - **Logs carry the settings.** `log_settings()` prints a `[Settings]` block per
   generation and `log_loaded_models()` a per-model GPU breakdown — ask for
-  those lines with any timing report.
+  those lines with any timing report. `FOOOCUS_MEMDEBUG=1` adds a census of
+  every live MPS tensor not owned by a loaded model (`census_mps_tensors()`).
+- **Open question (2026-10-14):** with LoRAs applied, MPS shows 7.9 GB live but
+  the loaded models own only 5.1 GB (SDXL fp16 4.78 + VAE 0.31); text-to-image
+  Lightning ran 30.7 s/it against 5.84 s/it with no LoRA. The census is how to
+  find the other 2.8 GB.
 - **Text encoders already run on the CPU on MPS** (`text_encoder_device()`:
   SHARED vram state → cpu). Don't "free" them from the GPU; they aren't there.
 - **Comfy runs as a subprocess** (`backend_base/comfyd.py`) using

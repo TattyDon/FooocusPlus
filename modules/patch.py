@@ -480,7 +480,51 @@ def patched_load_models_gpu(*args, **kwargs):
         torch.mps.empty_cache()
         log_mps_memory('after model load')
         log_loaded_models()
+        if os.environ.get('FOOOCUS_MEMDEBUG') == '1':
+            census_mps_tensors()
     return y
+
+
+def census_mps_tensors(top=8):
+    """
+    Opt-in (FOOOCUS_MEMDEBUG=1): every live tensor on the GPU, split into
+    storage owned by a loaded model and storage that isn't. Added to find
+    ~2.8 GB of live MPS memory that no loaded model accounted for when LoRAs
+    were applied. Walks gc, so it takes a second or two per model load.
+    """
+    import gc
+    gb = 1024 ** 3
+    owned = set()
+    for loaded in ldm_patched.modules.model_management.current_loaded_models:
+        for t in list(loaded.model.model.parameters()) + list(loaded.model.model.buffers()):
+            if t.device.type == 'mps':
+                owned.add(t.untyped_storage().data_ptr())
+    storages, orphans, samples = {}, {}, {}
+    for obj in gc.get_objects():
+        try:
+            if not torch.is_tensor(obj) or obj.device.type != 'mps':
+                continue
+            storage = obj.untyped_storage()
+        except Exception:
+            continue
+        ptr = storage.data_ptr()
+        if ptr in storages:
+            continue
+        storages[ptr] = storage.nbytes()
+        if ptr not in owned:
+            key = (str(obj.dtype).replace('torch.', ''), tuple(obj.shape))
+            count, size = orphans.get(key, (0, 0))
+            orphans[key] = (count + 1, size + storage.nbytes())
+            samples.setdefault(key, obj)
+    total = sum(storages.values())
+    orphan_total = sum(size for _, size in orphans.values())
+    print(f'[MemDebug] GPU tensors reachable from Python: {total / gb:.2f} GB in {len(storages)} storages; '
+          f'not owned by a loaded model: {orphan_total / gb:.2f} GB')
+    for key, (count, size) in sorted(orphans.items(), key=lambda kv: -kv[1][1])[:top]:
+        dtype, shape = key
+        holders = sorted({type(r).__name__ for r in gc.get_referrers(samples[key])
+                          if r is not samples and type(r).__name__ != 'frame'})
+        print(f'[MemDebug]   {size / gb:.2f} GB: {count} x {dtype} {list(shape)} held by {", ".join(holders) or "?"}')
 
 
 def log_loaded_models():
