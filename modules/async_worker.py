@@ -1011,6 +1011,12 @@ def worker():
             use_fill=denoising_strength > 0.99,
             k=inpaint_respective_field
         )
+        # Whatever survives of the original inside the edit is almost always
+        # unmasked area, so say how much the mask actually covers.
+        mask_cover = float((np.asarray(inpaint_mask) > 127).mean()) * 100
+        print(f'[Settings] inpaint mask covers {mask_cover:.1f}% of the image, '
+              f'original pixels {"ignored" if inpaint_disable_initial_latent else "used as the start"} '
+              f'(Disable Initial Latent {"on" if inpaint_disable_initial_latent else "off"})')
         if async_task.debugging_inpaint_preprocessor:
             interpret('Debugging the inpaint preprocessor:', debugging_inpaint_preprocessor)
             yield_result(async_task, inpaint_worker.current_task.visualize_mask_processing(), 100,
@@ -1478,6 +1484,10 @@ def worker():
                     async_task.inpaint_mask_image_upload = (async_task.inpaint_mask_image_upload > 127).astype(
                         np.uint8) * 255
                     inpaint_mask = np.maximum(inpaint_mask, async_task.inpaint_mask_image_upload)
+                    print('[Settings] inpaint mask: painted strokes + uploaded/generated mask')
+                else:
+                    print('[Settings] inpaint mask: painted strokes only '
+                          '(Advanced Masking is on but no uploaded/generated mask reached the worker)')
 
             if int(async_task.inpaint_erode_or_dilate) != 0:
                 inpaint_mask = erode_or_dilate(inpaint_mask, async_task.inpaint_erode_or_dilate)
