@@ -533,14 +533,20 @@ def log_loaded_models():
     inpaint showed 7.9 GB live where the fp16 UNet alone is ~5.1 GB.
     """
     gb = 1024 ** 3
+    seen = set()
     for loaded in ldm_patched.modules.model_management.current_loaded_models:
+        name = type(loaded.model.model).__name__
+        if id(loaded.model.model) in seen:
+            print(f'[Mem]   {name}: same weights as an entry above (a LoRA clone, no extra memory)')
+            continue
+        seen.add(id(loaded.model.model))
         on_gpu = {}
         for t in list(loaded.model.model.parameters()) + list(loaded.model.model.buffers()):
             if t.device.type == 'mps':
                 key = str(t.dtype).replace('torch.', '')
                 on_gpu[key] = on_gpu.get(key, 0) + t.numel() * t.element_size()
         detail = ', '.join(f'{k} {v / gb:.2f} GB' for k, v in on_gpu.items()) or 'nothing on GPU'
-        print(f'[Mem]   {type(loaded.model.model).__name__}: {detail}')
+        print(f'[Mem]   {name}: {detail}')
 
 
 def build_loaded(module, loader_name):

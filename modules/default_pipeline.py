@@ -1,3 +1,4 @@
+import gc
 from os import getpid
 import torch
 from pathlib import Path
@@ -162,6 +163,15 @@ def assert_model_integrity():
     return True
 
 
+def release_loaded_models(sd_model):
+    """Unload every loaded model (and LoRA clone) belonging to sd_model."""
+    for patcher in (sd_model.unet,
+                    getattr(sd_model.clip, 'patcher', None),
+                    getattr(sd_model.vae, 'patcher', None)):
+        if patcher is not None:
+            ldm_patched.modules.model_management.unload_model_clones(patcher)
+
+
 @torch.no_grad()
 @torch.inference_mode()
 def refresh_base_model(name, vae_name=None):
@@ -191,7 +201,13 @@ def refresh_base_model(name, vae_name=None):
     if model_base.filename == filename and model_base.vae_filename == vae_filename:
         return
 
+    # Drop what the outgoing checkpoint still has loaded before reading the
+    # new one. Otherwise its entries stay in model_management's loaded list:
+    # after switching RealVisXL -> Lustify on a 16 GB Mac the log listed two
+    # SDXLClipModel entries, keeping the old text encoders (~1.6 GB) in RAM.
+    release_loaded_models(model_base)
     model_base = core.load_model(filename, vae_filename)
+    gc.collect()
     interpret('Base model loaded:', model_base.filename)
     interpret('VAE loaded:', model_base.vae_filename)
     return

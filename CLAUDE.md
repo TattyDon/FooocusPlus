@@ -83,6 +83,11 @@ John's fork of DavidDragonsage/FooocusPlus (itself a Fooocus fork, GPL-3.0).
   the loaded models own only 5.1 GB (SDXL fp16 4.78 + VAE 0.31); text-to-image
   Lightning ran 30.7 s/it against 5.84 s/it with no LoRA. The census is how to
   find the other 2.8 GB.
+- **Switching base model releases the old one.** `release_loaded_models()` in
+  `modules/default_pipeline.py` unloads the outgoing checkpoint's UNet, CLIP
+  and VAE (and their LoRA clones) before the new one loads; before this the
+  log showed two SDXLClipModel entries after RealVisXL -> Lustify.
+  `log_loaded_models()` marks entries that share weights with an earlier one.
 - **Text encoders already run on the CPU on MPS** (`text_encoder_device()`:
   SHARED vram state → cpu). Don't "free" them from the GPU; they aren't there.
 - **Comfy runs as a subprocess** (`backend_base/comfyd.py`) using
