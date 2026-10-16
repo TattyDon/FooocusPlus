@@ -230,8 +230,10 @@ def bind_ip_slot_logic(image_comp, radio_comp, stop_slider, weight_slider, slot_
 # Inpainting Area for "Modify Content". Upstream uses 0.0 ("only the masked
 # area"), so the model sees a bare hole with no body around it: asked for a
 # white top on a photo of a woman, it painted an unrelated little scene inside
-# the shirt-shaped mask. 0.618 (Blend's default) gives it the surroundings.
-MODIFY_RESPECTIVE_FIELD = 0.618
+# the shirt-shaped mask. At 0.618 the original top still showed through; 1.0
+# (the whole image as context) replaced it properly. Lower it for small
+# details such as faces or hands, where a tighter crop gives more resolution.
+MODIFY_RESPECTIVE_FIELD = 1.0
 
 
 def inpaint_mode_change(mode, inpaint_engine_version):

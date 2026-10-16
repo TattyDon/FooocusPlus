@@ -71,10 +71,11 @@ John's fork of DavidDragonsage/FooocusPlus (itself a Fooocus fork, GPL-3.0).
   refiner_swap()` in `modules/async_worker.py` turns it off on MPS;
   `FOOOCUS_INPAINT_REFINER_SWAP=1` restores it. It changes output slightly —
   John's call which he prefers, inpaint quality is the point of this fork.
-- **"Modify Content" inpainting defaults Inpainting Area to 0.618, not 0.0**
+- **"Modify Content" inpainting defaults Inpainting Area to 1.0, not 0.0**
   (`MODIFY_RESPECTIVE_FIELD`, `modules/ui_util.py`, both the Inpaint and the
   Enhance tab). At upstream's 0.0 the model sees only the masked hole and
-  paints an unrelated scene into it; seen with RealVisXL and Lustify alike.
+  paints an unrelated scene into it; at 0.618 a replaced top still kept the
+  original's shapes; 1.0 worked (John, 2026-10-16). Small details want lower.
 - **Logs carry the settings.** `log_settings()` prints a `[Settings]` block per
   generation and `log_loaded_models()` a per-model GPU breakdown — ask for
   those lines with any timing report. `FOOOCUS_MEMDEBUG=1` adds a census of
