@@ -830,9 +830,11 @@ for image_count in range(default_controlnet_image_count):
     })
 
 
+# On by default in this fork: John masks with SAM / generated masks.
+# A saved config.txt value still wins.
 default_inpaint_advanced_masking_checkbox = get_config_item_or_set_default(
     key='default_inpaint_advanced_masking_checkbox',
-    default_value=False,
+    default_value=True,
     validator=lambda x: isinstance(x, bool),
     expected_type=bool
 )
