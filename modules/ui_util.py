@@ -227,6 +227,13 @@ def bind_ip_slot_logic(image_comp, radio_comp, stop_slider, weight_slider, slot_
     )
 
 
+# Inpainting Area for "Modify Content". Upstream uses 0.0 ("only the masked
+# area"), so the model sees a bare hole with no body around it: asked for a
+# white top on a photo of a woman, it painted an unrelated little scene inside
+# the shirt-shaped mask. 0.618 (Blend's default) gives it the surroundings.
+MODIFY_RESPECTIVE_FIELD = 0.618
+
+
 def inpaint_mode_change(mode, inpaint_engine_version):
 
     if mode == inpaint_option_detail:
@@ -257,7 +264,7 @@ def inpaint_mode_change(mode, inpaint_engine_version):
             True,                          # inpaint_disable_initial_latent
             inpaint_engine_version,             # inpaint_engine
             1.0,                                # inpaint_strength
-            0.0                                 # inpaint_respective_field
+            MODIFY_RESPECTIVE_FIELD             # inpaint_respective_field
         ]
 
     common.inpaint_mode = 'Inpaint Default: Blend'
@@ -290,7 +297,7 @@ def enhance_inpaint_mode_change(mode, inpaint_engine_version):
 
     if mode == inpaint_option_modify:
         return [
-            True, inpaint_engine_version, 1.0, 0.0
+            True, inpaint_engine_version, 1.0, MODIFY_RESPECTIVE_FIELD
         ]
 
     return [
